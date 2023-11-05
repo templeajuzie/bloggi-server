@@ -1,0 +1,42 @@
+const mongoose = require("mongoose");
+
+const blogSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  shortdescription: {
+    type: String,
+    required: true,
+  },
+  
+  category: {
+    type: String,
+    required: true,
+  },
+  longdescription: {
+    type: String,
+    required: true,
+  },
+  blogimage: {
+    type: String,
+  },
+  view: {
+    type: Array,
+  },
+  like: {
+    type: Array,
+  },
+  comment: {
+    type: Array,
+  },
+  authorid: {
+    type: mongoose.Types.ObjectId,
+    ref: 'Users',
+    required: true,
+  }
+}, {timestamps: true});
+
+const Blog = mongoose.model("Blog", blogSchema);
+
+module.exports = Blog;
