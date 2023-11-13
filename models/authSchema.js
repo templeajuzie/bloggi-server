@@ -34,6 +34,9 @@ const AuthSchema = new mongoose.Schema(
     following: {
       type: 'array',
     },
+    interest: {
+      type: 'array',
+    },
     mypost: {
       type: 'array',
     },

@@ -1,11 +1,16 @@
-const multer = require('multer')
-const upload = multer({ dest: 'uploads/' })
-const BlogJoiSchema = require('../Utils/BlogJoiSchema')
+const BlogJoiSchema = require("../Utils/BlogJoiSchema");
 
-const { StatusCodes } = require('http-status-codes');
-
-const blog = require('../models/blogSchema');
-const { UnAuthorizedError, NotFoundError, ValidationError } = require('../errors');
+const { StatusCodes } = require("http-status-codes");
+const fs = require("fs");
+const blog = require("../models/blogSchema");
+const user = require("../models/authSchema");
+const {
+  UnAuthorizedError,
+  NotFoundError,
+  ValidationError,
+} = require("../errors");
+const cloudinary = require("../Utils/CloudinaryFileUpload");
+const { log } = require("console");
 
 const getAllBlog = async (req, res) => {
   try {
@@ -14,12 +19,10 @@ const getAllBlog = async (req, res) => {
     if (allblog.length === 0) {
       return res
         .status(StatusCodes.NOT_FOUND)
-        .json({ message: 'No blogs found' });
+        .json({ message: "No blogs found" });
     }
 
-    console.log(allblog);
-
-    return res.status(StatusCodes.OK).json({ allblog, message: 'All blog' });
+    return res.status(StatusCodes.OK).json({ allblog, message: "All blog" });
   } catch (error) {
     return res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -28,63 +31,74 @@ const getAllBlog = async (req, res) => {
 };
 
 const createBlog = async (req, res) => {
-  
-  const {
-    title,
-    shortdescription,
-    longdescription,
-    category,
-    blogimage,
-  } = req.body;
+  const { title, shortdescription, longdescription, category } = req.body;
 
   try {
-    const currentUser = await req.user;
+    const currentUser = req.user;
 
     if (!currentUser) {
-      throw new UnAuthorizedError('User not found');
+      throw new UnAuthorizedError("User not found");
     }
 
-    const newblog = {
-      title: title,
-      shortdescription: shortdescription,
-      longdescription: longdescription,
-      category: category,
-      blogimage: blogimage,
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const { originalname, size, mimetype, path } = req.file;
+
+    const blogphoto = await cloudinary.uploader.upload(path, {
+      use_filename: true,
+      folder: "AllBlogsImage",
+    });
+
+    if (!blogphoto.secure_url) {
+      throw new Error("Failed to upload file to Cloudinary");
+    }
+
+    const newBlog = {
+      title,
+      shortdescription,
+      longdescription,
+      category,
+      blogimage: blogphoto.secure_url,
       authorid: currentUser._id,
     };
 
-    const { error, value } = BlogJoiSchema.validate(newblog);
+    const { error, value } = BlogJoiSchema.validate(newBlog);
 
     if (error) {
-      throw new ValidationError("Your information is Invalid ");
+      throw new ValidationError("Invalid blog information");
     }
 
-    const blogdata = await blog.create(value); // Create the new blog post
+    const blogData = await blog.create(value);
 
-    // Update the user's mypost array with the new blog post ID
-    currentUser.mypost.push(blogdata._id);
-    await currentUser.save(); // Save the user with the updated mypost array
+    currentUser.mypost.push(blogData._id);
 
-    return res.status(StatusCodes.CREATED).json({ blogdata });
+    await currentUser.save();
+
+    return res.status(StatusCodes.CREATED).json({
+      blogData,
+      message: "Blog created successfully",
+    });
   } catch (error) {
     return res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ message: error.message });
   }
 };
+
 const getSingleBlog = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const findBlog = await blog.findById(id);
+    const blogdata = await blog.findById(id);
 
-    if (!findBlog) {
-      throw new NotFoundError('Blog not found');
+    if (!blogdata) {
+      throw new NotFoundError("Blog not found");
     }
 
-    return res.status(StatusCodes.OK).json({ data: findBlog });
+    return res.status(StatusCodes.OK).json({ blogdata });
   } catch (error) {
-    console.log(error);
     return res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ message: error });
@@ -92,27 +106,62 @@ const getSingleBlog = async (req, res) => {
 };
 
 const updateBlog = async (req, res) => {
-
-  const { id } = req.params;
+  const { title, shortdescription, longdescription, category, blogid } =
+    req.body;
 
   try {
-    const blogdata = await blog.findById(id);
+    const blogdata = await blog.findById(blogid);
 
     const olduser = await req.user._id;
 
     if (!blogdata) {
-      throw new NotFoundError('Blog not found');
-    } else if (blogdata.authorid.toString() !== olduser.toString()) {
-      throw new UnAuthorizedError('User not authorized');
+      throw new NotFoundError("Blog not found");
+    } else if (
+      !olduser &&
+      blogdata.authorid.toString() !== olduser.toString()
+    ) {
+      throw new UnAuthorizedError("User not authorized");
     }
 
-    const updatedBlog = await blog.findByIdAndUpdate(id, req.body, {
+    if (req.file === undefined) {
+      const oldpost = {
+        title,
+        shortdescription,
+        longdescription,
+        category,
+      };
+
+      const updatedBlog = await blog.findByIdAndUpdate(blogid, oldpost, {
+        new: true,
+      });
+
+      return res
+        .status(StatusCodes.OK)
+        .json({ data: updatedBlog, message: "Blog updated successfully" });
+    }
+
+    const { path } = req.file;
+
+    const blogphoto = await cloudinary.uploader.upload(path, {
+      use_filename: true,
+      folder: "AllBlogsImage",
+    });
+
+    const oldpost = {
+      title,
+      shortdescription,
+      longdescription,
+      category,
+      blogimage: blogphoto.secure_url,
+    };
+
+    const updatedBlog = await blog.findByIdAndUpdate(blogid, oldpost, {
       new: true,
     });
 
     res
       .status(StatusCodes.OK)
-      .json({ data: updatedBlog, message: 'Blog updated successfully' });
+      .json({ data: updatedBlog, message: "Blog updated successfully" });
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: error });
   }
@@ -124,45 +173,66 @@ const deleteBlog = async (req, res) => {
   try {
     const blogdata = await blog.findById(id);
 
-    const olduser = await req.user._id;
+    const olduser = req.user._id;
 
     if (!blogdata) {
-      throw new NotFoundError('Blog not found');
+      throw new NotFoundError("Blog not found");
     } else if (blogdata.authorid.toString() !== olduser.toString()) {
-      throw new UnAuthorizedError('User not authorized');
+      throw new UnAuthorizedError("User not authorized");
     }
 
-    await blog.findByIdAndDelete(id);
+    const userid = olduser.toString();
 
-    res
-      .status(StatusCodes.OK)
-      .json({ message: 'Blog deleted successfully' });
+    try {
+      const getUserinfo = await user.findById(userid);
+      const userpost = getUserinfo.mypost;
+      const index = userpost.indexOf(id);
+
+      if (index !== -1) {
+        console.log(index);
+
+        // Remove the element from the array and store it in changeid
+        await userpost.splice(index, 1);
+
+        await blog.findByIdAndDelete(id);
+
+        // Save the changes to the mypost array
+        await getUserinfo.save();
+
+        res.status(StatusCodes.OK).json({ message: "Blog deleted successfully" });
+      }
+    } catch (error) {
+      console.error(error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "An error occurred while updating user data" });
+    }
   } catch (error) {
+    console.error(error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: error });
   }
 };
 
+
 const getUserBlog = async (req, res) => {
+  const { id } = req.params;
+
   try {
+    const oldblog = await blog.findById(id);
 
-    const getUserId = await (req).user._id.toString();
-
-    if (!getUserId) {
-      throw new NotFoundError('Unauthorized');
+    if (!oldblog) {
+      throw new NotFoundError("Blog does not exist");
     }
 
-    const getUserEvent = await blog.find({ authorid: getUserId });
+    const getUserId = await req.user._id;
 
-    if (!getUserEvent) {
-      throw new NotFoundError('Blog not found');
+    if (!getUserId && getUserId !== oldblog.authorid) {
+      throw new NotFoundError("Unauthorized");
     }
 
-    res.status(StatusCodes.OK).json(getUserEvent);
-
+    res.status(StatusCodes.OK).json({ oldblog });
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error);
   }
-}
+};
 
 module.exports = {
   getAllBlog,
@@ -170,5 +240,5 @@ module.exports = {
   getSingleBlog,
   updateBlog,
   deleteBlog,
-  getUserBlog
+  getUserBlog,
 };

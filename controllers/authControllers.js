@@ -8,6 +8,10 @@ const path = require('path');
 const fs = require('fs');
 const ejs = require('ejs');
 const { CreateToken, VerifyToken } = require('../Helper/authToken');
+const multer = require("multer");
+const cloudinary = require('../Utils/CloudinaryFileUpload');
+
+const upload = multer({ dest: "public/tmp" });
 
 const UserJoi = require('../Utils/UserJoiSchema');
 const {
@@ -107,14 +111,17 @@ const singleUser = async (req, res) => {
   try {
 
     const olduser = await User.findById(id);
-    const userblog = await Blog.find({authorid: id})
+    const userblog = await Blog.find({ authorid: id })
 
     if (!olduser) {
       throw new NotFoundError('User not found');
     }
 
-    console.log(olduser, userblog);
-    res.status(StatusCodes.OK).json({ olduser });
+    if (!userblog) {
+      throw new NotFoundError("No Blog found")
+    }
+
+    res.status(StatusCodes.OK).json({ olduser, userblog });
 
   } catch (error) {
     res
@@ -225,7 +232,7 @@ const userUpdatePassword = async (req, res) => {
   }
 };
 
-const chekcUsername = async (req, res) => {
+const checkUsername = async (req, res) => {
   const { username } = req.body;
 
   const olduser = await User.findOne({ username });
@@ -248,25 +255,62 @@ const chekcUsername = async (req, res) => {
 };
 
 const userUpdate = async (req, res) => {
+  const { fullname, username, userbio } = req.body;
+
   try {
     if (!req.user) {
       throw new NotFoundError('User not found');
     }
 
-    const updatedUser = await User.findByIdAndUpdate(req.user._id, req.body, {
-      new: true,
-    });
+    if (!req.file) {
 
-    res.status(StatusCodes.OK).json({
-      message: 'User updated successfully',
-      user: updatedUser,
-    });
+      const olduser = { fullname, username, userbio };
+
+      const mainuser = await User.findByIdAndUpdate(String(req.user._id), olduser, {
+        new: true,
+      });
+
+
+      res.status(StatusCodes.OK).json({ data: mainuser, message: 'Account updated successfully' });
+    } else {
+      
+
+      const { path } = req.file;
+
+      try {
+        const userphoto = await cloudinary.uploader.upload(path, {
+          use_filename: true,
+          folder: "AllBlogsImage"
+        });
+
+        console.log(userphoto.secure_url);
+
+        const olduser = {
+          fullname,
+          username,
+          userbio,
+          userdp: userphoto.secure_url,
+        };
+
+        const updatedUser = await User.findByIdAndUpdate(String(req.user._id), olduser, {
+          new: true,
+        });
+
+        res.status(StatusCodes.OK).json({
+          message: 'Account updated successfully',
+          user: updatedUser,
+        });
+      } catch (uploadError) {
+        console.error('Error uploading file to Cloudinary:', uploadError);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error uploading file to Cloudinary' });
+      }
+    }
   } catch (error) {
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: error.message });
+    console.error(error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
   }
 };
+
 
 const currentUser = async (req, res) => {
   try {
@@ -330,7 +374,7 @@ module.exports = {
   userUpdatePassword,
   userVerifyPasswordReset,
   singleUser,
-  chekcUsername,
+  checkUsername,
   currentUser,
   userUpdate,
   userSignOut,

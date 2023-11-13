@@ -8,6 +8,7 @@ const Userjoi = joi.object({
   userbio: joi.string(),
   password: joi.string().required(),
   followers: joi.array(),
+  interest: joi.array(),
   following: joi.array(),
   mypost: joi.array(),
 });
