@@ -88,13 +88,16 @@ const signIn = async (req, res) => {
 
     const token = CreateToken(olduser._id);
 
+    console.log(token);
+
     res.setHeader("Authorization", "Bearer " + token);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.cookie("authtoken", token, {
       maxAge: maxAgeInMilliseconds,
       httpOnly: false,
     });
-    res.cookie("authtoken", token, { maxAge: 3600000 });
+
+    // res.cookie("authtoken", token, { maxAge: maxAgeInMilliseconds });
 
     res.status(StatusCodes.OK).json({
       message: "Account signed in successfully.",
@@ -418,7 +421,6 @@ const userConnect = (io) => {
           };
 
           socket.emit("profileconnect", socketdata);
-
         }
       } catch (error) {}
     });
