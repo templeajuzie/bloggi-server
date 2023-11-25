@@ -7,7 +7,7 @@ const BlogJoiSchema = joi.object({
   category: joi.string().required(),
   authorid: joi.object().required(),
   blogimage: joi.string().required(),
-  view: joi.array(),
+  view: joi.number(),
   like: joi.array(),
   Comments: joi.array(),
 });

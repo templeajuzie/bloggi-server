@@ -1,16 +1,17 @@
 const BlogJoiSchema = require("../Utils/BlogJoiSchema");
-
+const CommentJoiSchema = require("../Utils/CommentJoiSchema");
+const cookieParser = require("cookie-parser");
 const { StatusCodes } = require("http-status-codes");
 const fs = require("fs");
 const blog = require("../models/blogSchema");
 const user = require("../models/authSchema");
+
 const {
   UnAuthorizedError,
   NotFoundError,
   ValidationError,
 } = require("../errors");
 const cloudinary = require("../Utils/CloudinaryFileUpload");
-const { log } = require("console");
 
 const getAllBlog = async (req, res) => {
   try {
@@ -97,11 +98,28 @@ const getSingleBlog = async (req, res) => {
       throw new NotFoundError("Blog not found");
     }
 
+    // Check if the user has already viewed this post
+    const hasUserViewed = req.cookies[`viewed_${id}`];
+
+    if (!hasUserViewed && req.method === "GET") {
+      // Increment the view count
+      console.log("not viewed yet");
+      blogdata.view = (blogdata.view || 0) + 1;
+
+      // Set a cookie to mark that the user has viewed this post
+      res.cookie(`viewed_${id}`, "true", { maxAge: 24 * 60 * 60 * 1000 }); // 1 day expiry
+
+      await blogdata.save();
+    }
+
+    console.log("has viewed");
+
     return res.status(StatusCodes.OK).json({ blogdata });
   } catch (error) {
+    console.error("Error in getSingleBlog:", error); // Log the error for debugging
     return res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ message: error });
+      .json({ message: "Internal Server Error" });
   }
 };
 
@@ -199,18 +217,21 @@ const deleteBlog = async (req, res) => {
         // Save the changes to the mypost array
         await getUserinfo.save();
 
-        res.status(StatusCodes.OK).json({ message: "Blog deleted successfully" });
+        res
+          .status(StatusCodes.OK)
+          .json({ message: "Blog deleted successfully" });
       }
     } catch (error) {
       console.error(error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "An error occurred while updating user data" });
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ message: "An error occurred while updating user data" });
     }
   } catch (error) {
     console.error(error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: error });
   }
 };
-
 
 const getUserBlog = async (req, res) => {
   const { id } = req.params;
@@ -234,6 +255,111 @@ const getUserBlog = async (req, res) => {
   }
 };
 
+//blog comment controller
+
+const postReaction2 = async (req, res) => {
+  const { blogid } = req.body;
+  console.log(blogid);
+
+  try {
+    const blogdata = await blog.findById(blogid);
+
+    const olduser = await req.user._id;
+    let userid = String(olduser);
+    console.log(userid);
+
+    if (!blogdata) {
+      console.log("Blog not found");
+      throw new NotFoundError("Blog not found");
+    } else if (!olduser) {
+      console.log("User not found");
+      throw new UnAuthorizedError("User not authorized");
+    } else if (blogdata.like.includes(userid)) {
+      const index = blogdata.like.indexOf(userid);
+      blogdata.like.splice(index, 1);
+
+      blogdata.save();
+
+      console.log("Like removed with userid: " + userid);
+
+      return res.status(StatusCodes.OK).json({ message: "Like removed" });
+    }
+
+    blogdata.like.push(userid);
+
+    blogdata.save();
+
+    console.log("Like added with userid: " + userid);
+
+    res.status(StatusCodes.OK).json({ message: "Like added" });
+  } catch (error) {}
+};
+
+const postReaction = (io) => {
+  io.on("connection", (socket) => {
+    socket.on("postreact", async (react) => {
+      try {
+        console.log(react);
+
+        const blogData = await blog.findById(react.blogid);
+
+        if (!blogData) {
+          console.log("Blog not found");
+          throw new NotFoundError("Blog not found");
+        } else if (blogData.like.includes(react.userid)) {
+          console.log("true id is already in the list");
+          const index = blogData.like.indexOf(react.userid);
+          blogData.like.splice(index, 1);
+
+          blogData.save();
+
+          console.log("Like removed with userid: " + react.userid);
+        } else {
+          blogData.like.unshift(react.userid);
+
+          blogData.save();
+
+          console.log("Like added with userid: " + react.userid);
+
+          socket.emit("alllike", blogData.like);
+        }
+      } catch (error) {}
+    });
+  });
+};
+
+const handleNewComment = (io) => {
+  io.on("connection", (socket) => {
+    socket.on("newcomment", async (newComment) => {
+      try {
+        console.log(newComment);
+
+        const blogData = await blog.findById(newComment.blogid);
+
+        if (!blogData) {
+          return res
+            .status(StatusCodes.NOT_FOUND)
+            .json({ error: "Blog not found" });
+        }
+
+        const { error, value } = CommentJoiSchema.validate(newComment);
+
+        if (error) {
+          throw new ValidationError("Invalid comment information");
+        }
+
+        console.log("blogData");
+
+        blogData.comment.unshift(value);
+
+        blogData.save();
+
+        socket.emit("allcomment", blogData.comment);
+      } catch (error) {}
+    });
+  });
+};
+
 module.exports = {
   getAllBlog,
   createBlog,
@@ -241,4 +367,6 @@ module.exports = {
   updateBlog,
   deleteBlog,
   getUserBlog,
+  postReaction,
+  handleNewComment,
 };

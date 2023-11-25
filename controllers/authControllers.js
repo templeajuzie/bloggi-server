@@ -1,24 +1,24 @@
-const User = require('../models/authSchema');
-const Blog = require('../models/blogSchema');
-const { StatusCodes } = require('http-status-codes');
-require('dotenv').config();
-const cookie = require('cookie-parser');
-const sendMail = require('../Utils/sendMail');
-const path = require('path');
-const fs = require('fs');
-const ejs = require('ejs');
-const { CreateToken, VerifyToken } = require('../Helper/authToken');
+const User = require("../models/authSchema");
+const Blog = require("../models/blogSchema");
+const { StatusCodes } = require("http-status-codes");
+require("dotenv").config();
+const cookie = require("cookie-parser");
+const sendMail = require("../Utils/sendMail");
+const path = require("path");
+const fs = require("fs");
+const ejs = require("ejs");
+const { CreateToken, VerifyToken } = require("../Helper/authToken");
 const multer = require("multer");
-const cloudinary = require('../Utils/CloudinaryFileUpload');
+const cloudinary = require("../Utils/CloudinaryFileUpload");
 
 const upload = multer({ dest: "public/tmp" });
 
-const UserJoi = require('../Utils/UserJoiSchema');
+const UserJoi = require("../Utils/UserJoiSchema");
 const {
   NotFoundError,
   UnAuthorizedError,
   ValidationError,
-} = require('../errors/index');
+} = require("../errors/index");
 
 const maxAgeInMilliseconds = 7 * 24 * 60 * 60 * 1000;
 
@@ -30,24 +30,24 @@ const signUp = async (req, res) => {
     const findUserUsername = await User.findOne({ username });
 
     if (findUser) {
-      throw new UnAuthorizedError('Email already exists');
+      throw new UnAuthorizedError("Email already exists");
     } else if (findUserUsername) {
-      throw new UnAuthorizedError('Username is taken');
+      throw new UnAuthorizedError("Username is taken");
     }
 
-    console.log('not found');
+    console.log("not found");
 
     const { error, value } = UserJoi.validate({
       fullname,
       username,
       email,
       password,
-      userdp
+      userdp,
     });
 
     if (error) {
-      console.log('error');
-      throw new ValidationError('error');
+      console.log("error");
+      throw new ValidationError("error");
     }
 
     console.log(value);
@@ -58,7 +58,7 @@ const signUp = async (req, res) => {
 
     res.status(StatusCodes.CREATED).json({
       data: newUser,
-      message: 'Account created successfully',
+      message: "Account created successfully",
     });
   } catch (error) {
     res
@@ -68,33 +68,36 @@ const signUp = async (req, res) => {
 };
 
 const signIn = async (req, res) => {
+  console.log("hit sign");
   const { email, password } = req.body;
 
   try {
     const olduser = await User.findOne({ email });
 
     if (!olduser) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
+
+    console.log(olduser);
 
     const authenticatedUser = await olduser.checkPassword(password);
 
     if (!authenticatedUser) {
-      throw new UnAuthorizedError('Invalid credentials');
+      throw new UnAuthorizedError("Invalid credentials");
     }
 
     const token = CreateToken(olduser._id);
 
-    res.setHeader('Authorization', 'Bearer ' + token);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.cookie('authtoken', token, {
+    res.setHeader("Authorization", "Bearer " + token);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.cookie("authtoken", token, {
       maxAge: maxAgeInMilliseconds,
       httpOnly: false,
     });
-    // res.cookie('authtoken', token, { maxAge: 3600000 });
+    res.cookie("authtoken", token, { maxAge: 3600000 });
 
     res.status(StatusCodes.OK).json({
-      message: 'Account signed in successfully.',
+      message: "Account signed in successfully.",
       authToken: token,
       olduser,
     });
@@ -109,20 +112,18 @@ const singleUser = async (req, res) => {
   const id = req.params.id;
 
   try {
-
     const olduser = await User.findById(id);
-    const userblog = await Blog.find({ authorid: id })
+    const userblog = await Blog.find({ authorid: id });
 
     if (!olduser) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     if (!userblog) {
-      throw new NotFoundError("No Blog found")
+      throw new NotFoundError("No Blog found");
     }
 
     res.status(StatusCodes.OK).json({ olduser, userblog });
-
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -137,13 +138,13 @@ const userRecovery = async (req, res) => {
     const userexist = await User.findOne({ email });
 
     if (!userexist) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     const token = CreateToken({ id: userexist._id });
 
     const passwordUpdateUrl = `http://localhost:8000/api/v1/auth/account/updatepassword/${token}`;
-    const templatePath = path.join(__dirname, '../views/passwordRecovery.ejs');
+    const templatePath = path.join(__dirname, "../views/passwordRecovery.ejs");
     const renderHtml = await ejs.renderFile(
       templatePath,
       {
@@ -157,13 +158,14 @@ const userRecovery = async (req, res) => {
 
     await sendMail({
       email: userexist.email,
-      subject: 'Password Recovery',
+      subject: "Password Recovery",
       html: renderHtml,
     });
 
-    res
+    return res
       .status(StatusCodes.OK)
       .send({ message: `verification email has been sent to ${email}` });
+
     console.log(`verification email sent to ${email}`);
   } catch (error) {
     res
@@ -178,14 +180,14 @@ const userVerifyPasswordReset = async (req, res) => {
   try {
     const decodedId = VerifyToken(token);
 
-    console.log('hit');
+    console.log("hit");
 
     if (decodedId === undefined) {
-      console.log('Invalid token');
-      throw new UnAuthorizedError('Invalid token');
+      console.log("Invalid token");
+      throw new UnAuthorizedError("Invalid token");
     }
 
-    console.log('Valid token');
+    console.log("Valid token");
     res.redirect(
       `http://localhost:3000/updatepassword?verified=true&reset=${token}`
     );
@@ -201,17 +203,17 @@ const userUpdatePassword = async (req, res) => {
 
   try {
     if (password !== confirmPassword) {
-      throw new ValidationError('Passwords do not match');
+      throw new ValidationError("Passwords do not match");
     }
 
-    console.log('hit...');
+    console.log("hit...");
 
     const decodedId = VerifyToken(reset);
 
-    const checkuser = await User.findById(decodedId['id']['id']);
+    const checkuser = await User.findById(decodedId["id"]["id"]);
 
     if (!checkuser) {
-      throw new UnAuthorizedError('User not found');
+      throw new UnAuthorizedError("User not found");
     }
 
     const hashedPassword = await checkuser.newHashPassword(password);
@@ -224,7 +226,7 @@ const userUpdatePassword = async (req, res) => {
 
     return res
       .status(StatusCodes.OK)
-      .json({ message: 'password updated successfully' });
+      .json({ message: "password updated successfully" });
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -240,13 +242,13 @@ const checkUsername = async (req, res) => {
   try {
     if (!olduser) {
       console.log(req.body);
-      console.log('available');
-      return res.status(StatusCodes.OK).json({ message: 'available' });
+      console.log("available");
+      return res.status(StatusCodes.OK).json({ message: "available" });
     }
 
     console.log(req.body);
-    console.log('taken');
-    return res.status(StatusCodes.CONFLICT).json({ message: 'taken' });
+    console.log("taken");
+    return res.status(StatusCodes.CONFLICT).json({ message: "taken" });
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -259,28 +261,30 @@ const userUpdate = async (req, res) => {
 
   try {
     if (!req.user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     if (!req.file) {
-
       const olduser = { fullname, username, userbio };
 
-      const mainuser = await User.findByIdAndUpdate(String(req.user._id), olduser, {
-        new: true,
-      });
+      const mainuser = await User.findByIdAndUpdate(
+        String(req.user._id),
+        olduser,
+        {
+          new: true,
+        }
+      );
 
-
-      res.status(StatusCodes.OK).json({ data: mainuser, message: 'Account updated successfully' });
+      res
+        .status(StatusCodes.OK)
+        .json({ data: mainuser, message: "Account updated successfully" });
     } else {
-      
-
       const { path } = req.file;
 
       try {
         const userphoto = await cloudinary.uploader.upload(path, {
           use_filename: true,
-          folder: "AllBlogsImage"
+          folder: "AllBlogsImage",
         });
 
         console.log(userphoto.secure_url);
@@ -292,39 +296,44 @@ const userUpdate = async (req, res) => {
           userdp: userphoto.secure_url,
         };
 
-        const updatedUser = await User.findByIdAndUpdate(String(req.user._id), olduser, {
-          new: true,
-        });
+        const updatedUser = await User.findByIdAndUpdate(
+          String(req.user._id),
+          olduser,
+          {
+            new: true,
+          }
+        );
 
         res.status(StatusCodes.OK).json({
-          message: 'Account updated successfully',
+          message: "Account updated successfully",
           user: updatedUser,
         });
       } catch (uploadError) {
-        console.error('Error uploading file to Cloudinary:', uploadError);
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error uploading file to Cloudinary' });
+        console.error("Error uploading file to Cloudinary:", uploadError);
+        res
+          .status(StatusCodes.INTERNAL_SERVER_ERROR)
+          .json({ error: "Error uploading file to Cloudinary" });
       }
     }
   } catch (error) {
     console.error(error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: error.message });
   }
 };
 
-
 const currentUser = async (req, res) => {
   try {
-
     if (req.user) {
-
       const olduser = await User.findById(req.user._id);
 
       return res
         .status(200)
-        .json({ olduser, message: 'data recieved successfully' });
+        .json({ olduser, message: "data recieved successfully" });
     }
 
-    throw new NotFoundError('User not found');
+    throw new NotFoundError("User not found");
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -335,12 +344,12 @@ const currentUser = async (req, res) => {
 const userSignOut = async (req, res) => {
   try {
     if (!req.user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
-    res.setHeader('Authorization', 'Bearer ' + '');
+    res.setHeader("Authorization", "Bearer " + "");
 
-    res.status(StatusCodes.OK).json({ message: 'Signout successfully' });
+    res.status(StatusCodes.OK).json({ message: "Signout successfully" });
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -351,20 +360,69 @@ const userSignOut = async (req, res) => {
 const userDelete = async (req, res) => {
   try {
     if (!req.user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError("User not found");
     }
 
     const deleteUser = await User.findByIdAndDelete(req.user);
 
     if (deleteUser) {
-      res.status(StatusCodes.OK).json({ message: 'User deleted successfully' });
-      console.log('User deleted successfully');
+      res.status(StatusCodes.OK).json({ message: "User deleted successfully" });
+      console.log("User deleted successfully");
     }
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: error.message });
   }
+};
+
+const userConnect = (io) => {
+  io.on("connection", (socket) => {
+    socket.on("userconnect", async (connectData) => {
+      try {
+        console.log(connectData);
+
+        const userData = await User.findById(connectData.userid);
+        const profileData = await User.findById(connectData.profileid);
+
+        if (!userData && !profileData) {
+          throw new NotFoundError("Users not found");
+        } else if (
+          profileData.followers.includes(connectData.userid) &&
+          userData.following.includes(connectData.profileid)
+        ) {
+          console.log("true id is already in the list");
+          const index1 = profileData.followers.indexOf(connectData.userid);
+          const index2 = userData.following.indexOf(connectData.profileid);
+          profileData.followers.splice(index1, 1);
+          userData.following.splice(index2, 1);
+          profileData.save();
+          userData.save();
+
+          console.log("Like removed with userid: " + react.userid);
+        } else {
+          profileData.followers.unshift(connectData.userid);
+          userData.following.unshift(connectData.profileid);
+
+          profileData.save();
+          userData.save();
+
+          console.log("Like added with userid: " + react.userid);
+
+          let item1 = profileData.followers;
+          let item2 = userData.following;
+
+          const socketdata = {
+            item1,
+            item2,
+          };
+
+          socket.emit("profileconnect", socketdata);
+
+        }
+      } catch (error) {}
+    });
+  });
 };
 
 module.exports = {
@@ -379,4 +437,5 @@ module.exports = {
   userUpdate,
   userSignOut,
   userDelete,
+  userConnect,
 };
