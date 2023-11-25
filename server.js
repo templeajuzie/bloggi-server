@@ -5,7 +5,7 @@ const blogRouter = require("./routes/blogRoutes");
 const authRouter = require("./routes/authRoutes");
 const bodyParser = require("body-parser");
 const multer = require("multer");
-const port = process.env.PORT || 5000;
+
 const path = require("path");
 const cors = require("cors");
 const http = require("http");
@@ -14,7 +14,7 @@ const {
   handleNewComment,
   postReaction,
 } = require("./controllers/blogControllers");
-const {userConnect} = require("./controllers/authControllers");
+const { userConnect } = require("./controllers/authControllers");
 
 const cookieParser = require("cookie-parser");
 
@@ -49,9 +49,9 @@ app.use(
   })
 );
 
-connectDb();
+connectDb(server);
 
-server.listen(port, console.log(`Server listening to ${port} 🔥🔥`));
+
 
 app.use(express.json());
 app.use(cookieParser());
