@@ -158,7 +158,7 @@ const userRecovery = async (req, res) => {
 
     await sendMail({
       email: userexist.email,
-      subject: "Password Recovery",
+      subject: "Bloggi Password Recovery",
       html: renderHtml,
     });
 
