@@ -31,7 +31,7 @@ const blogSchema = new mongoose.Schema({
   comment: {
     type: Array,
   },
-  authorid: {
+  author: {
     type: mongoose.Types.ObjectId,
     ref: 'Users',
     required: true,

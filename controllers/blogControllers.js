@@ -5,6 +5,9 @@ const { StatusCodes } = require("http-status-codes");
 const fs = require("fs");
 const blog = require("../models/blogSchema");
 const user = require("../models/authSchema");
+require('dotenv').config();
+
+const clientUrl = process.env.CLIENT_URL
 
 const {
   UnAuthorizedError,
@@ -13,9 +16,13 @@ const {
 } = require("../errors");
 const cloudinary = require("../Utils/CloudinaryFileUpload");
 
+
+
 const getAllBlog = async (req, res) => {
   try {
-    const allblog = await blog.find();
+    const allblog = await blog
+      .find()
+      .populate("author", "fullname username userdp");
 
     if (allblog.length === 0) {
       return res
@@ -23,6 +30,7 @@ const getAllBlog = async (req, res) => {
         .json({ message: "No blogs found" });
     }
 
+    console.log(allblog);
     return res.status(StatusCodes.OK).json({ allblog, message: "All blog" });
   } catch (error) {
     return res
@@ -62,7 +70,7 @@ const createBlog = async (req, res) => {
       longdescription,
       category,
       blogimage: blogphoto.secure_url,
-      authorid: currentUser._id,
+      author: currentUser._id,
     };
 
     const { error, value } = BlogJoiSchema.validate(newBlog);
@@ -92,7 +100,9 @@ const getSingleBlog = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const blogdata = await blog.findById(id);
+    const blogdata = await blog
+      .findById(id)
+      .populate("author", "fullname username userdp");
 
     if (!blogdata) {
       throw new NotFoundError("Blog not found");
@@ -134,10 +144,7 @@ const updateBlog = async (req, res) => {
 
     if (!blogdata) {
       throw new NotFoundError("Blog not found");
-    } else if (
-      !olduser &&
-      blogdata.authorid.toString() !== olduser.toString()
-    ) {
+    } else if (!olduser && blogdata.author.toString() !== olduser.toString()) {
       throw new UnAuthorizedError("User not authorized");
     }
 
@@ -195,14 +202,14 @@ const deleteBlog = async (req, res) => {
 
     if (!blogdata) {
       throw new NotFoundError("Blog not found");
-    } else if (blogdata.authorid.toString() !== olduser.toString()) {
+    } else if (blogdata.author.toString() !== olduser.toString()) {
       throw new UnAuthorizedError("User not authorized");
     }
 
-    const userid = olduser.toString();
+    // const userid = olduser.toString();
 
     try {
-      const getUserinfo = await user.findById(userid);
+      const getUserinfo = await user.findById(olduser);
       const userpost = getUserinfo.mypost;
       const index = userpost.indexOf(id);
 
@@ -256,44 +263,6 @@ const getUserBlog = async (req, res) => {
 };
 
 //blog comment controller
-
-const postReaction2 = async (req, res) => {
-  const { blogid } = req.body;
-  console.log(blogid);
-
-  try {
-    const blogdata = await blog.findById(blogid);
-
-    const olduser = await req.user._id;
-    let userid = String(olduser);
-    console.log(userid);
-
-    if (!blogdata) {
-      console.log("Blog not found");
-      throw new NotFoundError("Blog not found");
-    } else if (!olduser) {
-      console.log("User not found");
-      throw new UnAuthorizedError("User not authorized");
-    } else if (blogdata.like.includes(userid)) {
-      const index = blogdata.like.indexOf(userid);
-      blogdata.like.splice(index, 1);
-
-      blogdata.save();
-
-      console.log("Like removed with userid: " + userid);
-
-      return res.status(StatusCodes.OK).json({ message: "Like removed" });
-    }
-
-    blogdata.like.push(userid);
-
-    blogdata.save();
-
-    console.log("Like added with userid: " + userid);
-
-    res.status(StatusCodes.OK).json({ message: "Like added" });
-  } catch (error) {}
-};
 
 const postReaction = (io) => {
   io.on("connection", (socket) => {

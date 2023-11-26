@@ -1,1 +1,10 @@
-.env
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# production
+/build
+
+# local env files
+.env*.local

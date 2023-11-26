@@ -17,13 +17,14 @@ const {
 const { userConnect } = require("./controllers/authControllers");
 
 const cookieParser = require("cookie-parser");
+const clientUrl = process.env.CLIENT_URL
 
 const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000"],
+    origin: [clientUrl],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Authorization", "Content-Type"],
     credentials: true,
@@ -36,7 +37,7 @@ userConnect(io);
 
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
+    origin: [clientUrl],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Authorization", "Content-Type"],
     credentials: true,
@@ -50,8 +51,6 @@ app.use(
 );
 
 connectDb(server);
-
-
 
 app.use(express.json());
 app.use(cookieParser());

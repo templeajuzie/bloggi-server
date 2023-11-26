@@ -5,11 +5,11 @@ const BlogJoiSchema = joi.object({
   shortdescription: joi.string().required(),
   longdescription: joi.string().required(),
   category: joi.string().required(),
-  authorid: joi.object().required(),
+  author: joi.object().required(),
   blogimage: joi.string().required(),
   view: joi.number(),
   like: joi.array(),
-  Comments: joi.array(),
+  comment: joi.array(),
 });
 
 

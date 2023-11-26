@@ -12,6 +12,8 @@ const multer = require("multer");
 const cloudinary = require("../Utils/CloudinaryFileUpload");
 
 const upload = multer({ dest: "public/tmp" });
+const clientUrl = process.env.CLIENT_URL
+const serverUrl = process.env.SERVER_URL
 
 const UserJoi = require("../Utils/UserJoiSchema");
 const {
@@ -146,7 +148,7 @@ const userRecovery = async (req, res) => {
 
     const token = CreateToken({ id: userexist._id });
 
-    const passwordUpdateUrl = `http://localhost:8000/api/v1/auth/account/updatepassword/${token}`;
+    const passwordUpdateUrl = `${serverUrl}/api/v1/auth/account/updatepassword/${token}`;
     const templatePath = path.join(__dirname, "../views/passwordRecovery.ejs");
     const renderHtml = await ejs.renderFile(
       templatePath,
@@ -192,7 +194,7 @@ const userVerifyPasswordReset = async (req, res) => {
 
     console.log("Valid token");
     res.redirect(
-      `http://localhost:3000/updatepassword?verified=true&reset=${token}`
+      `${clientUrl}/updatepassword?verified=true&reset=${token}`
     );
   } catch (error) {
     res
