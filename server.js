@@ -1,8 +1,8 @@
 const express = require("express");
 require("dotenv").config();
-const connectDb = require("../db/ConnectDb");
-const blogRouter = require("../routes/blogRoutes");
-const authRouter = require("../routes/authRoutes");
+const connectDb = require("./db/ConnectDb");
+const blogRouter = require("./routes/blogRoutes");
+const authRouter = require("./routes/authRoutes");
 const bodyParser = require("body-parser");
 const multer = require("multer");
 
@@ -13,8 +13,8 @@ const { Server } = require("socket.io");
 const {
   handleNewComment,
   postReaction,
-} = require("../controllers/blogControllers");
-const { userConnect } = require("../controllers/authControllers");
+} = require("./controllers/blogControllers");
+const { userConnect } = require("./controllers/authControllers");
 
 const cookieParser = require("cookie-parser");
 
