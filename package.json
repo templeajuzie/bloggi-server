@@ -4,9 +4,8 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "postinstall": "npm install -g nodemon",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js",
+    "dev": "/usr/local/lib/node_modules/nodemon server.js",
     "start": "nodemon server.js",
     "build": "npm i"
 
