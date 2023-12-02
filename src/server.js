@@ -5,7 +5,6 @@ const blogRouter = require("../routes/blogRoutes");
 const authRouter = require("../routes/authRoutes");
 const bodyParser = require("body-parser");
 const multer = require("multer");
-const serverless = require("serverless-http");
 
 const path = require("path");
 const cors = require("cors");
@@ -76,8 +75,4 @@ app.use("/api/v1/auth", authRouter);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "/views"));
 
-app.use(`/.netlify/functions/server`, blogRouter);
-app.use(`/.netlify/functions/server`, authRouter);
 
-module.exports = app;
-module.exports.handler = serverless(app);
