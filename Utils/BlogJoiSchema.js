@@ -1,5 +1,5 @@
-const joi = require('joi');
-const commentSchema = require('./CommentJoiSchema')
+const joi = require("joi");
+const commentSchema = require("./CommentJoiSchema");
 
 const BlogJoiSchema = joi.object({
   title: joi.string().required(),
@@ -12,6 +12,5 @@ const BlogJoiSchema = joi.object({
   like: joi.array().items(joi.string().pattern(/^[0-9a-fA-F]{24}$/)),
   comment: joi.array().items(commentSchema),
 });
-
 
 module.exports = BlogJoiSchema;
