@@ -7,10 +7,10 @@ const Userjoi = joi.object({
   userdp: joi.string(),
   userbio: joi.string(),
   password: joi.string().required(),
-  followers: joi.array(),
+  followers: joi.array().items(joi.string().pattern(/^[0-9a-fA-F]{24}$/)),
+  following: joi.array().items(joi.string().pattern(/^[0-9a-fA-F]{24}$/)),
   interest: joi.array(),
-  following: joi.array(),
-  mypost: joi.array(),
+  mypost: joi.array().items(joi.string().pattern(/^[0-9a-fA-F]{24}$/)),
 });
 
 module.exports = Userjoi;

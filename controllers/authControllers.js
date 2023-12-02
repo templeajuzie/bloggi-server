@@ -12,8 +12,8 @@ const multer = require("multer");
 const cloudinary = require("../Utils/CloudinaryFileUpload");
 
 const upload = multer({ dest: "public/tmp" });
-const clientUrl = process.env.CLIENT_URL
-const serverUrl = process.env.SERVER_URL
+const clientUrl = process.env.CLIENT_URL;
+const serverUrl = process.env.SERVER_URL;
 
 const UserJoi = require("../Utils/UserJoiSchema");
 const {
@@ -88,7 +88,9 @@ const signIn = async (req, res) => {
       throw new UnAuthorizedError("Invalid credentials");
     }
 
-    const token = CreateToken(olduser._id);
+    const MaxAge = 3 * 24 * 60 * 60;
+
+    const token = CreateToken(olduser._id, MaxAge);
 
     console.log(token);
 
@@ -99,7 +101,7 @@ const signIn = async (req, res) => {
       httpOnly: false,
     });
 
-    // res.cookie("authtoken", token, { maxAge: maxAgeInMilliseconds });
+  
 
     res.status(StatusCodes.OK).json({
       message: "Account signed in successfully.",
@@ -118,7 +120,7 @@ const singleUser = async (req, res) => {
 
   try {
     const olduser = await User.findById(id);
-    const userblog = await Blog.find({ authorid: id });
+    const userblog = await Blog.find({ author: id });
 
     if (!olduser) {
       throw new NotFoundError("User not found");
@@ -146,7 +148,8 @@ const userRecovery = async (req, res) => {
       throw new NotFoundError("User not found");
     }
 
-    const token = CreateToken({ id: userexist._id });
+    const MaxAge = 10 * 60;
+    const token = CreateToken({ id: userexist._id }, MaxAge);
 
     const passwordUpdateUrl = `${serverUrl}/api/v1/auth/account/updatepassword/${token}`;
     const templatePath = path.join(__dirname, "../views/passwordRecovery.ejs");
@@ -189,13 +192,12 @@ const userVerifyPasswordReset = async (req, res) => {
 
     if (decodedId === undefined) {
       console.log("Invalid token");
+      res.redirect(`${clientUrl}/recovery`);
       throw new UnAuthorizedError("Invalid token");
     }
 
     console.log("Valid token");
-    res.redirect(
-      `${clientUrl}/updatepassword?verified=true&reset=${token}`
-    );
+    res.redirect(`${clientUrl}/updatepassword?verified=true&reset=${token}`);
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -385,26 +387,26 @@ const userConnect = (io) => {
   io.on("connection", (socket) => {
     socket.on("userconnect", async (connectData) => {
       try {
-        console.log(connectData);
-
         const userData = await User.findById(connectData.userid);
         const profileData = await User.findById(connectData.profileid);
 
-        if (!userData && !profileData) {
+        if (!userData || !profileData) {
           throw new NotFoundError("Users not found");
-        } else if (
+        }
+
+        if (
           profileData.followers.includes(connectData.userid) &&
           userData.following.includes(connectData.profileid)
         ) {
-          console.log("true id is already in the list");
+          console.log("User is already in the list");
+
           const index1 = profileData.followers.indexOf(connectData.userid);
           const index2 = userData.following.indexOf(connectData.profileid);
+
           profileData.followers.splice(index1, 1);
           userData.following.splice(index2, 1);
           profileData.save();
           userData.save();
-
-          console.log("Like removed with userid: " + react.userid);
         } else {
           profileData.followers.unshift(connectData.userid);
           userData.following.unshift(connectData.profileid);
@@ -412,19 +414,19 @@ const userConnect = (io) => {
           profileData.save();
           userData.save();
 
-          console.log("Like added with userid: " + react.userid);
-
-          let item1 = profileData.followers;
-          let item2 = userData.following;
-
-          const socketdata = {
-            item1,
-            item2,
-          };
-
-          socket.emit("profileconnect", socketdata);
+          console.log("Connection added with userid: " + connectData.userid);
         }
-      } catch (error) {}
+
+        // Emit the updated profileData regardless of the conditions
+        let sendconnectData = {
+          profileData,
+          userData,
+        };
+        io.emit("profileconnect", sendconnectData);
+      } catch (error) {
+        // Handle the error appropriately
+        console.error("Error:", error);
+      }
     });
   });
 };

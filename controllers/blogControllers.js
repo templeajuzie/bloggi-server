@@ -5,9 +5,9 @@ const { StatusCodes } = require("http-status-codes");
 const fs = require("fs");
 const blog = require("../models/blogSchema");
 const user = require("../models/authSchema");
-require('dotenv').config();
+require("dotenv").config();
 
-const clientUrl = process.env.CLIENT_URL
+const clientUrl = process.env.CLIENT_URL;
 
 const {
   UnAuthorizedError,
@@ -15,8 +15,6 @@ const {
   ValidationError,
 } = require("../errors");
 const cloudinary = require("../Utils/CloudinaryFileUpload");
-
-
 
 const getAllBlog = async (req, res) => {
   try {
@@ -30,7 +28,6 @@ const getAllBlog = async (req, res) => {
         .json({ message: "No blogs found" });
     }
 
-    console.log(allblog);
     return res.status(StatusCodes.OK).json({ allblog, message: "All blog" });
   } catch (error) {
     return res
@@ -102,7 +99,11 @@ const getSingleBlog = async (req, res) => {
   try {
     const blogdata = await blog
       .findById(id)
-      .populate("author", "fullname username userdp");
+      .populate("author", "fullname username userdp")
+      .populate({
+        path: "comment.userid",
+        select: "fullname userdp",
+      });
 
     if (!blogdata) {
       throw new NotFoundError("Blog not found");
@@ -283,6 +284,12 @@ const postReaction = (io) => {
           blogData.save();
 
           console.log("Like removed with userid: " + react.userid);
+          
+          const blogreact = blogData.like;
+
+          console.log(blogreact);
+
+          socket.emit("alllike", blogreact);
         } else {
           blogData.like.unshift(react.userid);
 
@@ -290,7 +297,11 @@ const postReaction = (io) => {
 
           console.log("Like added with userid: " + react.userid);
 
-          socket.emit("alllike", blogData.like);
+          const blogreact = blogData.like;
+
+          console.log(blogreact);
+
+          socket.emit("alllike", blogreact);
         }
       } catch (error) {}
     });
@@ -298,33 +309,52 @@ const postReaction = (io) => {
 };
 
 const handleNewComment = (io) => {
-  io.on("connection", (socket) => {
-    socket.on("newcomment", async (newComment) => {
+  io.on("connection", async (socket) => {
+    socket.on("newcomment", async ({ usercomment, blogid, userid }) => {
       try {
-        console.log(newComment);
-
-        const blogData = await blog.findById(newComment.blogid);
+        const blogData = await blog.findById(blogid);
 
         if (!blogData) {
-          return res
-            .status(StatusCodes.NOT_FOUND)
-            .json({ error: "Blog not found" });
+          return socket.emit("commentError", { error: "Blog not found" });
         }
 
-        const { error, value } = CommentJoiSchema.validate(newComment);
+        const newuser = await user.findById(userid);
+
+        if (!newuser) {
+          return socket.emit("commentError", { error: "User not found" });
+        }
+
+        const commentData = {
+          usercomment,
+          userid,
+        };
+
+        const { error, value } = CommentJoiSchema.validate(commentData);
 
         if (error) {
-          throw new ValidationError("Invalid comment information");
+          return socket.emit("commentError", {
+            error: "Invalid comment information",
+          });
         }
 
-        console.log("blogData");
-
         blogData.comment.unshift(value);
+        await blogData.save();
 
-        blogData.save();
+        console.log(value);
 
-        socket.emit("allcomment", blogData.comment);
-      } catch (error) {}
+        // Populate the user information in the comment
+        const populatedBlogData = await blog.findById(blogid).populate({
+          path: "comment.userid",
+          select: "fullname userdp",
+        });
+
+        socket.emit("allcomment", populatedBlogData.comment);
+      } catch (error) {
+        console.error("Error handling new comment:", error);
+        socket.emit("commentError", {
+          error: "An error occurred while handling the comment",
+        });
+      }
     });
   });
 };

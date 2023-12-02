@@ -6,7 +6,7 @@ const jwt_secret = process.env.JWT_SECRET;
 
 const MaxAge = 3 * 24 * 60 * 60;
 
-const CreateToken = (id) => {
+const CreateToken = (id, MaxAge) => {
   return jwt.sign({ id }, jwt_secret, {
     expiresIn: MaxAge,
   });

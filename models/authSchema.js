@@ -18,6 +18,7 @@ const AuthSchema = new mongoose.Schema(
     },
     userbio: {
       type: 'string',
+      default: "Tell us about yourself"
     },
     email: {
       type: 'string',
@@ -28,18 +29,21 @@ const AuthSchema = new mongoose.Schema(
       type: 'string',
       required: true,
     },
-    followers: {
-      type: 'array',
-    },
-    following: {
-      type: 'array',
-    },
+    followers: [{
+      type: mongoose.Types.ObjectId,
+      ref: 'Users',
+    }],
+    following: [{
+      type: mongoose.Types.ObjectId,
+      ref: 'Users',
+    }],
     interest: {
       type: 'array',
     },
-    mypost: {
-      type: 'array',
-    },
+    mypost: [{
+      type: mongoose.Types.ObjectId,
+      ref: 'Blog',
+    }],
   },
   { timestamps: true }
 );

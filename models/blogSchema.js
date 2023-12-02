@@ -1,5 +1,21 @@
 const mongoose = require("mongoose");
 
+const commentSchema = new mongoose.Schema({
+  usercomment: {
+    type: String,
+    required: true,
+  },
+  userid: {
+    type: mongoose.Types.ObjectId,
+    ref: 'Users',
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const blogSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -14,6 +30,7 @@ const blogSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+
   longdescription: {
     type: String,
     required: true,
@@ -25,12 +42,11 @@ const blogSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  like: {
-    type: Array,
-  },
-  comment: {
-    type: Array,
-  },
+  like: [{
+    type: mongoose.Types.ObjectId,
+    ref: 'Users',
+  }],
+  comment: [commentSchema],
   author: {
     type: mongoose.Types.ObjectId,
     ref: 'Users',
