@@ -101,8 +101,6 @@ const signIn = async (req, res) => {
       httpOnly: false,
     });
 
-  
-
     res.status(StatusCodes.OK).json({
       message: "Account signed in successfully.",
       authToken: token,
@@ -190,7 +188,7 @@ const userVerifyPasswordReset = async (req, res) => {
 
     console.log("hit");
 
-    if (decodedId === undefined) {
+    if (!decodedId) {
       console.log("Invalid token");
       res.redirect(`${clientUrl}/recovery`);
       throw new UnAuthorizedError("Invalid token");
@@ -399,6 +397,7 @@ const userConnect = (io) => {
           userData.following.includes(connectData.profileid)
         ) {
           console.log("User is already in the list");
+          
 
           const index1 = profileData.followers.indexOf(connectData.userid);
           const index2 = userData.following.indexOf(connectData.profileid);

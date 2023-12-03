@@ -309,6 +309,7 @@ const postReaction = (io) => {
 };
 
 const handleNewComment = (io) => {
+  
   io.on("connection", async (socket) => {
     socket.on("newcomment", async ({ usercomment, blogid, userid }) => {
       try {
