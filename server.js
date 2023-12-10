@@ -10,6 +10,7 @@ const path = require("path");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
+
 const {
   handleNewComment,
   postReaction,
@@ -43,6 +44,7 @@ app.use(
     allowedHeaders: ["Authorization", "Content-Type"],
     credentials: true,
   })
+
 );
 
 app.use(
@@ -74,5 +76,3 @@ app.use("/api/v1/auth", authRouter);
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "/views"));
-
-
