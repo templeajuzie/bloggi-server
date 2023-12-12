@@ -80,8 +80,6 @@ const signIn = async (req, res) => {
       throw new NotFoundError("User not found");
     }
 
-    console.log(olduser);
-
     const authenticatedUser = await olduser.checkPassword(password);
 
     if (!authenticatedUser) {
