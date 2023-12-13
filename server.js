@@ -33,6 +33,8 @@ const io = new Server(server, {
   },
 });
 
+//sockets
+
 handleNewComment(io);
 postReaction(io);
 userConnect(io);
