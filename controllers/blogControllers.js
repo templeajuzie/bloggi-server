@@ -284,7 +284,7 @@ const postReaction = (io) => {
           blogData.save();
 
           console.log("Like removed with userid: " + react.userid);
-          
+
           const blogreact = blogData.like;
 
           console.log(blogreact);
@@ -309,7 +309,6 @@ const postReaction = (io) => {
 };
 
 const handleNewComment = (io) => {
-  
   io.on("connection", async (socket) => {
     socket.on("newcomment", async ({ usercomment, blogid, userid }) => {
       try {
