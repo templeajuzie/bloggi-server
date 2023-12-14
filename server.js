@@ -17,7 +17,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["https://bloggi-client.vercel.app"],
+    origin: [process.env.CLIENT_URL],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Authorization", "Content-Type"],
     credentials: true,
@@ -26,7 +26,7 @@ const io = new Server(server, {
 
 // Middleware
 app.use(cors({
-  origin: ["https://bloggi-client.vercel.app"],
+  origin: [process.env.CLIENT_URL],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Authorization", "Content-Type"],
   credentials: true,
