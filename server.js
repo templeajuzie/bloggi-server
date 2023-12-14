@@ -20,7 +20,7 @@ const io = new Server(server, {
     origin: [process.env.CLIENT_URL],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Authorization", "Content-Type"],
-    credentials: true,
+    // credentials: true,
   },
 });
 
@@ -29,7 +29,7 @@ app.use(cors({
   origin: [process.env.CLIENT_URL],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Authorization", "Content-Type"],
-  credentials: true,
+  // credentials: true,
 }));
 
 app.use(express.json());
