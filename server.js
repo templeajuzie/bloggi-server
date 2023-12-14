@@ -11,6 +11,7 @@ const authRouter = require("./routes/authRoutes");
 const multer = require("multer");
 const { handleNewComment, postReaction } = require("./controllers/blogControllers");
 const { userConnect } = require("./controllers/authControllers");
+require("dotenv").config()
 
 const app = express();
 const server = http.createServer(app);
