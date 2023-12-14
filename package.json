@@ -11,7 +11,7 @@
   },
   "author": "",
   "license": "ISC",
-  "proxy": "http://localhost:3000",
+  "proxy": "bloggi-client.vercel.app",
   "engines": {
     "node": "20.9.0"
   },
