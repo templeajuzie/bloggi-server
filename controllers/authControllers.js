@@ -91,7 +91,6 @@ const signIn = async (req, res) => {
     const MaxAge = 3 * 24 * 60 * 60;
 
     const token = CreateToken(olduser._id, MaxAge);
-git
     console.log(token);
 
     res.setHeader("Authorization", "Bearer " + token);
