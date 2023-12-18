@@ -99,6 +99,8 @@ const signIn = async (req, res) => {
     res.cookie("authtoken", token, {
       maxAge: maxAgeInMilliseconds,
       httpOnly: false,
+      domain: process.env.CLIENT_URL,
+      secure: true
     });
 
     res.status(StatusCodes.OK).json({
