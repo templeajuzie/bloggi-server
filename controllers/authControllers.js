@@ -85,7 +85,6 @@ const signIn = async (req, res) => {
     const authenticatedUser = await olduser.checkPassword(password);
 
     if (!authenticatedUser) {
-      console.log("invalid")
       throw new UnAuthorizedError("Invalid credentials");
     }
 
@@ -100,6 +99,7 @@ const signIn = async (req, res) => {
     res.cookie("authtoken", token, {
       maxAge: maxAgeInMilliseconds,
       httpOnly: false,
+      domain: process.env.CLIENT_URL,
       secure: true
     });
 
