@@ -193,7 +193,7 @@ const userVerifyPasswordReset = async (req, res) => {
     if (!decodedId) {
       console.log("Invalid token");
       res.redirect(`${clientUrl}/recovery`);
-      throw new UnAuthorizedError("Invalid token");
+      // throw new UnAuthorizedError("Invalid token");
     }
 
     console.log("Valid token");

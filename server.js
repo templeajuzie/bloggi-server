@@ -18,7 +18,7 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(cors({
-  origin: [process.env.CLIENT_URL, process.env.LOCAL_CLIENT_URL,],
+  origin: [process.env.CLIENT_URL, process.env.LOCAL_CLIENT_URL],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Authorization", "Content-Type"],
   credentials: true,
@@ -27,7 +27,7 @@ app.use(cors({
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: [process.env.CLIENT_URL, process.env.LOCAL_CLIENT_URL],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Authorization", "Content-Type"],
     credentials: true,
