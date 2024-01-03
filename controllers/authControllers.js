@@ -1,26 +1,16 @@
 const User = require("../models/authSchema");
 const Blog = require("../models/blogSchema");
 const { StatusCodes } = require("http-status-codes");
-require("dotenv").config();
-const cookie = require("cookie-parser");
-const sendMail = require("../Utils/sendMail");
-const path = require("path");
-const fs = require("fs");
-const ejs = require("ejs");
 const { CreateToken, VerifyToken } = require("../Helper/authToken");
-const multer = require("multer");
-const cloudinary = require("../Utils/CloudinaryFileUpload");
-
-const upload = multer({ dest: "public/tmp" });
-const clientUrl = process.env.CLIENT_URL;
-const serverUrl = process.env.SERVER_URL;
-
-const UserJoi = require("../Utils/UserJoiSchema");
 const {
   NotFoundError,
   UnAuthorizedError,
   ValidationError,
 } = require("../errors/index");
+const cloudinary = require("../Utils/CloudinaryFileUpload");
+const sendMail = require("../Utils/sendMail");
+const path = require("path");
+const ejs = require("ejs");
 
 const maxAgeInMilliseconds = 7 * 24 * 60 * 60 * 1000;
 
@@ -28,16 +18,14 @@ const signUp = async (req, res) => {
   const { fullname, username, email, password, userdp } = req.body;
 
   try {
-    const findUser = await User.findOne({ email });
-    const findUserUsername = await User.findOne({ username });
+    const existingUser = await User.findOne({ email });
+    const existingUsername = await User.findOne({ username });
 
-    if (findUser) {
+    if (existingUser) {
       throw new UnAuthorizedError("Email already exists");
-    } else if (findUserUsername) {
+    } else if (existingUsername) {
       throw new UnAuthorizedError("Username is taken");
     }
-
-    console.log("not found");
 
     const { error, value } = UserJoi.validate({
       fullname,
@@ -48,15 +36,10 @@ const signUp = async (req, res) => {
     });
 
     if (error) {
-      console.log("error");
-      throw new ValidationError("error");
+      throw new ValidationError(error.message);
     }
 
-    console.log(value);
-
     const newUser = await User.create(value);
-
-    console.log(newUser);
 
     res.status(StatusCodes.CREATED).json({
       data: newUser,
@@ -70,29 +53,17 @@ const signUp = async (req, res) => {
 };
 
 const signIn = async (req, res) => {
-  console.log("hit sign");
   const { email, password } = req.body;
 
   try {
-    const olduser = await User.findOne({ email });
+    const user = await User.findOne({ email });
 
-    if (!olduser) {
-      throw new NotFoundError("User not found");
-    }
-
-    const authenticatedUser = await olduser.checkPassword(password);
-
-    if (!authenticatedUser) {
-      // If passwords do not match, throw an error
+    if (!user || !(await user.checkPassword(password))) {
       throw new UnAuthorizedError("Invalid credentials");
     }
 
     const MaxAge = 3 * 24 * 60 * 60;
-
-    const token = CreateToken(olduser._id, MaxAge);
-    console.log(token);
-
-    console.log(olduser);
+    const token = CreateToken(user._id, MaxAge);
 
     res.setHeader("Authorization", "Bearer " + token);
     res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -107,12 +78,10 @@ const signIn = async (req, res) => {
     return res.status(StatusCodes.OK).json({
       message: "Account signed in successfully.",
       authToken: token,
-      olduser,
+      user,
     });
   } catch (error) {
-    res
-      .status(StatusCodes.UNAUTHORIZED) // Adjust the status code to UNAUTHORIZED
-      .json({ error: error.message });
+    res.status(StatusCodes.UNAUTHORIZED).json({ error: error.message });
   }
 };
 
@@ -120,18 +89,18 @@ const singleUser = async (req, res) => {
   const id = req.params.id;
 
   try {
-    const olduser = await User.findById(id);
-    const userblog = await Blog.find({ author: id });
+    const user = await User.findById(id);
+    const userBlogs = await Blog.find({ author: id });
 
-    if (!olduser) {
+    if (!user) {
       throw new NotFoundError("User not found");
     }
 
-    if (!userblog) {
+    if (!userBlogs) {
       throw new NotFoundError("No Blog found");
     }
 
-    res.status(StatusCodes.OK).json({ olduser, userblog });
+    res.status(StatusCodes.OK).json({ user, userBlogs });
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -143,39 +112,36 @@ const userRecovery = async (req, res) => {
   const { email } = req.body;
 
   try {
-    const userexist = await User.findOne({ email });
+    const user = await User.findOne({ email });
 
-    if (!userexist) {
+    if (!user) {
       throw new NotFoundError("User not found");
     }
 
     const MaxAge = 10 * 60;
-    const token = CreateToken({ id: userexist._id }, MaxAge);
+    const token = CreateToken({ id: user._id }, MaxAge);
 
     const passwordUpdateUrl = `${serverUrl}/api/v1/auth/account/updatepassword/${token}`;
     const templatePath = path.join(__dirname, "../views/passwordRecovery.ejs");
     const renderHtml = await ejs.renderFile(
       templatePath,
       {
-        userFullname: userexist.fullname,
-        userEmail: userexist.email,
+        userFullname: user.fullname,
+        userEmail: user.email,
         userRecoveryUrl: passwordUpdateUrl,
       },
-
       { async: true }
     );
 
     await sendMail({
-      email: userexist.email,
+      email: user.email,
       subject: "Bloggi Password Recovery",
       html: renderHtml,
     });
 
     return res
       .status(StatusCodes.OK)
-      .send({ message: `verification email has been sent to ${email}` });
-
-    console.log(`verification email sent to ${email}`);
+      .send({ message: `Verification email has been sent to ${email}` });
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -189,15 +155,10 @@ const userVerifyPasswordReset = async (req, res) => {
   try {
     const decodedId = VerifyToken(token);
 
-    console.log("hit");
-
     if (!decodedId) {
-      console.log("Invalid token");
       res.redirect(`${clientUrl}/recovery`);
-      // throw new UnAuthorizedError("Invalid token");
     }
 
-    console.log("Valid token");
     res.redirect(`${clientUrl}/updatepassword?verified=true&reset=${token}`);
   } catch (error) {
     res
@@ -214,32 +175,25 @@ const userUpdatePassword = async (req, res) => {
       throw new ValidationError("Passwords do not match");
     }
 
-    console.log("hit password...");
-
     const decodedId = VerifyToken(reset);
 
-    console.log("user", decodedId.id.id);
-    const checkuser = await User.findById(String(decodedId.id.id));
+    const user = await User.findById(String(decodedId.id.id));
 
-
-
-    if (!checkuser) {
+    if (!user) {
       throw new UnAuthorizedError("User not found");
     }
 
-    const hashedPassword = await checkuser.newHashPassword(password);
+    const hashedPassword = await user.newHashPassword(password);
 
     await User.findByIdAndUpdate(
-      checkuser._id,
+      user._id,
       { password: hashedPassword },
       { new: true }
     );
 
-    console.log('updated user with password ' + hashedPassword);
-
     return res
       .status(StatusCodes.OK)
-      .json({ message: "password updated successfully" });
+      .json({ message: "Password updated successfully" });
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -250,18 +204,14 @@ const userUpdatePassword = async (req, res) => {
 const checkUsername = async (req, res) => {
   const { username } = req.body;
 
-  const olduser = await User.findOne({ username });
-
   try {
-    if (!olduser) {
-      console.log(req.body);
-      console.log("available");
-      return res.status(StatusCodes.OK).json({ message: "available" });
+    const existingUser = await User.findOne({ username });
+
+    if (!existingUser) {
+      return res.status(StatusCodes.OK).json({ message: "Username available" });
     }
 
-    console.log(req.body);
-    console.log("taken");
-    return res.status(StatusCodes.CONFLICT).json({ message: "taken" });
+    return res.status(StatusCodes.CONFLICT).json({ message: "Username taken" });
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
