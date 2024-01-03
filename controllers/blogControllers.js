@@ -20,6 +20,7 @@ const getAllBlog = async (req, res) => {
   try {
     const allblog = await blog
       .find()
+      .sort({ createdAt: -1 })
       .populate("author", "fullname username userdp");
 
     if (allblog.length === 0) {

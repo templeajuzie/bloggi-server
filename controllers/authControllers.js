@@ -99,8 +99,8 @@ const signIn = async (req, res) => {
       maxAge: maxAgeInMilliseconds,
       httpOnly: false,
       domain: process.env.CLIENT_URL,
-      sameSite: 'None',
-      secure: true
+      sameSite: "None",
+      secure: true,
     });
 
     res.status(StatusCodes.OK).json({
@@ -203,7 +203,7 @@ const userVerifyPasswordReset = async (req, res) => {
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: error.message });
   }
-};
+}; 
 
 const userUpdatePassword = async (req, res) => {
   const { reset, password, confirmPassword } = req.body;
@@ -294,7 +294,7 @@ const userUpdate = async (req, res) => {
           folder: "AllBlogsImage",
         });
 
-        console.log(userphoto.secure_url);
+        console.log(userphoto);
 
         const olduser = {
           fullname,
@@ -399,7 +399,6 @@ const userConnect = (io) => {
           userData.following.includes(connectData.profileid)
         ) {
           console.log("User is already in the list");
-          
 
           const index1 = profileData.followers.indexOf(connectData.userid);
           const index2 = userData.following.indexOf(connectData.profileid);
