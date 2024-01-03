@@ -214,11 +214,14 @@ const userUpdatePassword = async (req, res) => {
       throw new ValidationError("Passwords do not match");
     }
 
-    console.log("hit...");
+    console.log("hit password...");
 
     const decodedId = VerifyToken(reset);
 
-    const checkuser = await User.findById(decodedId["id"]["id"]);
+    console.log("user", decodedId.id.id);
+    const checkuser = await User.findById(String(decodedId.id.id));
+
+
 
     if (!checkuser) {
       throw new UnAuthorizedError("User not found");
@@ -231,6 +234,8 @@ const userUpdatePassword = async (req, res) => {
       { password: hashedPassword },
       { new: true }
     );
+
+    console.log('updated user with password ' + hashedPassword);
 
     return res
       .status(StatusCodes.OK)

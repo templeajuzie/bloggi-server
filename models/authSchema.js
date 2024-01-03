@@ -59,13 +59,15 @@ AuthSchema.methods.checkPassword = async function (password) {
   return checkPassword;
 };
 
-AuthSchema.methods.checkPassword = async function (password) {
+AuthSchema.methods.newHashPassword = async function (password) {
   try {
-    const checkPassword = await bcrypt.compare(password, this.password);
+    const gensalt = await bcrypt.genSalt(10);
+    const checkPassword = await bcrypt.hash(password, gensalt);
+    console.log('true', checkPassword);
     return checkPassword;
   } catch (error) {
     // Handle the error, e.g., log it or throw a custom error
-    throw new Error("Error checking password");
+    throw new Error("Error hashing password");
   }
 };
 

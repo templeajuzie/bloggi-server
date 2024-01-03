@@ -16,8 +16,5 @@ const VerifyToken = (token) => {
   return  jwt.verify(token, jwt_secret);
 }
 
-const storeCooke = () => {
-
-}
 
 module.exports = {CreateToken, VerifyToken};
