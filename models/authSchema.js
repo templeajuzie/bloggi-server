@@ -1,75 +1,86 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-require('dotenv').config();
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const { Schema } = mongoose;
 
-const AuthSchema = new mongoose.Schema(
+const AuthSchema = new Schema(
   {
     fullname: {
-      type: 'string',
+      type: String,
       required: true,
     },
     username: {
-      type: 'string',
+      type: String,
       unique: true,
       required: true,
     },
-    userdp: {
-      type: 'string',
-    },
+    userdp: String,
     userbio: {
-      type: 'string',
-      default: "Tell us about yourself"
+      type: String,
+      default: "Tell us about yourself",
     },
     email: {
-      type: 'string',
+      type: String,
       unique: true,
       required: true,
     },
     password: {
-      type: 'string',
+      type: String,
       required: true,
     },
-    followers: [{
-      type: mongoose.Types.ObjectId,
-      ref: 'Users',
-    }],
-    following: [{
-      type: mongoose.Types.ObjectId,
-      ref: 'Users',
-    }],
-    interest: {
-      type: 'array',
-    },
-    mypost: [{
-      type: mongoose.Types.ObjectId,
-      ref: 'Blog',
-    }],
+    followers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Users",
+      },
+    ],
+    following: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Users",
+      },
+    ],
+    interest: [String], // Assuming interest is an array of strings
+    mypost: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Blog",
+      },
+    ],
   },
   { timestamps: true }
 );
 
-AuthSchema.pre('save', async function (next) {
-  const gensalt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, gensalt);
-  next();
+AuthSchema.pre("save", async function (next) {
+  try {
+    if (!this.isModified("password")) {
+      return next();
+    }
+
+    const gensalt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, gensalt);
+    next();
+  } catch (error) {
+    return next(error);
+  }
 });
 
 AuthSchema.methods.checkPassword = async function (password) {
-  const checkPassword = await bcrypt.compare(password, this.password);
-  return checkPassword;
+  try {
+    const match = await bcrypt.compare(password, this.password);
+    return match;
+  } catch (error) {
+    throw new Error("Error comparing passwords");
+  }
 };
 
 AuthSchema.methods.newHashPassword = async function (password) {
   try {
     const gensalt = await bcrypt.genSalt(10);
-    const checkPassword = await bcrypt.hash(password, gensalt);
-    console.log('true', checkPassword);
-    return checkPassword;
+    const hashedPassword = await bcrypt.hash(password, gensalt);
+    return hashedPassword;
   } catch (error) {
-    // Handle the error, e.g., log it or throw a custom error
     throw new Error("Error hashing password");
   }
 };
 
-
-module.exports = mongoose.model('Users', AuthSchema);
+module.exports = mongoose.model("Users", AuthSchema);
