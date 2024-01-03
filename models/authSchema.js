@@ -59,10 +59,15 @@ AuthSchema.methods.checkPassword = async function (password) {
   return checkPassword;
 };
 
-AuthSchema.methods.newHashPassword = async function (password) {
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-  return hashedPassword;
+AuthSchema.methods.checkPassword = async function (password) {
+  try {
+    const checkPassword = await bcrypt.compare(password, this.password);
+    return checkPassword;
+  } catch (error) {
+    // Handle the error, e.g., log it or throw a custom error
+    throw new Error("Error checking password");
+  }
 };
+
 
 module.exports = mongoose.model('Users', AuthSchema);

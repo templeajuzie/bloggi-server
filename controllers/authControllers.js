@@ -80,11 +80,10 @@ const signIn = async (req, res) => {
       throw new NotFoundError("User not found");
     }
 
-    console.log(olduser);
-
     const authenticatedUser = await olduser.checkPassword(password);
 
     if (!authenticatedUser) {
+      // If passwords do not match, throw an error
       throw new UnAuthorizedError("Invalid credentials");
     }
 
@@ -92,6 +91,8 @@ const signIn = async (req, res) => {
 
     const token = CreateToken(olduser._id, MaxAge);
     console.log(token);
+
+    console.log(olduser);
 
     res.setHeader("Authorization", "Bearer " + token);
     res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -103,14 +104,14 @@ const signIn = async (req, res) => {
       secure: true,
     });
 
-    res.status(StatusCodes.OK).json({
+    return res.status(StatusCodes.OK).json({
       message: "Account signed in successfully.",
       authToken: token,
       olduser,
     });
   } catch (error) {
     res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .status(StatusCodes.UNAUTHORIZED) // Adjust the status code to UNAUTHORIZED
       .json({ error: error.message });
   }
 };
@@ -203,7 +204,7 @@ const userVerifyPasswordReset = async (req, res) => {
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ error: error.message });
   }
-}; 
+};
 
 const userUpdatePassword = async (req, res) => {
   const { reset, password, confirmPassword } = req.body;
