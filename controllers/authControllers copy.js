@@ -72,33 +72,29 @@ const signUp = async (req, res) => {
 const signIn = async (req, res) => {
   const { email, password } = req.body;
 
+  console.log(email, password);
+  
   try {
-    const olduser = await User.findOne({ email });
 
-    
+    const user = await User.findOne({ email });
 
-    if (!olduser) {
+    console.log(user);
+
+    if (!user) {
       throw new NotFoundError("User not found");
     }
 
-    console.log("user found");
+    const isPasswordValid = await user.checkPassword(password);
 
-    const authenticatedUser = await olduser.checkPassword(password);
-
-    if (!authenticatedUser) {
-      // If passwords do not match, throw an error
+    if (!isPasswordValid) {
       throw new UnAuthorizedError("Invalid credentials");
     }
 
-    const MaxAge = 3 * 24 * 60 * 60;
+    const token = CreateToken(user._id, maxAgeInMilliseconds);
 
-    const token = CreateToken(olduser._id, MaxAge);
-    console.log(token);
-
-    console.log(olduser);
-
-    res.setHeader("Authorization", "Bearer " + token);
+    res.setHeader("Authorization", `Bearer ${token}`);
     res.setHeader("Access-Control-Allow-Credentials", "true");
+
     res.cookie("authtoken", token, {
       maxAge: maxAgeInMilliseconds,
       httpOnly: false,
@@ -110,12 +106,15 @@ const signIn = async (req, res) => {
     return res.status(StatusCodes.OK).json({
       message: "Account signed in successfully.",
       authToken: token,
-      olduser,
+      user,
     });
   } catch (error) {
-    res
-      .status(StatusCodes.UNAUTHORIZED) // Adjust the status code to UNAUTHORIZED
-      .json({ error: error.message });
+    const statusCode =
+      error instanceof UnAuthorizedError
+        ? StatusCodes.UNAUTHORIZED
+        : StatusCodes.INTERNAL_SERVER_ERROR;
+
+    res.status(statusCode).json({ error: error.message });
   }
 };
 
