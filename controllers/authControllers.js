@@ -90,7 +90,7 @@ const signIn = async (req, res) => {
       throw new UnAuthorizedError("Invalid credentials");
     }
 
-    const MaxAge = 3 * 24 * 60 * 60;
+    const MaxAge = 30 * 24 * 60 * 60;
 
     const token = CreateToken(olduser._id, MaxAge);
     console.log(token);
