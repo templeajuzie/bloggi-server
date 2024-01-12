@@ -90,8 +90,8 @@ const signIn = async (req, res) => {
     console.log("ths is result", authenticatedUser);
 
     if (!authenticatedUser) {
-      console.log("Invalid credentials");
-      throw new UnAuthorizedError("Invalid credentials");
+      console.log("Invalid email or password");
+      throw new UnAuthorizedError("Invalid email or password");
     }
 
     const MaxAge = 30 * 24 * 60 * 60;
