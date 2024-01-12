@@ -49,7 +49,7 @@ const signUp = async (req, res) => {
 
     if (error) {
       console.log("error");
-      throw new ValidationError("error");
+      throw new ValidationError("Invalid user input");
     }
 
     console.log(value);
@@ -70,7 +70,6 @@ const signUp = async (req, res) => {
 };
 
 const signIn = async (req, res) => {
-
   const email = req.body.email.trim();
   const password = req.body.password.trim();
 
@@ -86,7 +85,7 @@ const signIn = async (req, res) => {
 
     console.log("User found");
 
-    const authenticatedUser = olduser.checkPassword(password);
+    const authenticatedUser = await olduser.checkPassword(password);
 
     console.log("ths is result", authenticatedUser);
 
@@ -121,7 +120,6 @@ const signIn = async (req, res) => {
   }
 };
 
-
 const singleUser = async (req, res) => {
   const id = req.params.id;
 
@@ -147,6 +145,8 @@ const singleUser = async (req, res) => {
 
 const userRecovery = async (req, res) => {
   const { email } = req.body;
+
+  console.log(email);
 
   try {
     const userexist = await User.findOne({ email });
