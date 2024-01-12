@@ -25,7 +25,7 @@ const {
 const maxAgeInMilliseconds = 7 * 24 * 60 * 60 * 1000;
 
 const signUp = async (req, res) => {
-  const { fullname, username, email, password, userdp } = req.body;
+  const { fullname, username, email, password } = req.body;
 
   try {
     const findUser = await User.findOne({ email });
@@ -44,7 +44,6 @@ const signUp = async (req, res) => {
       username,
       email,
       password,
-      userdp,
     });
 
     if (error) {

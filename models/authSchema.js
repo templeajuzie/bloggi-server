@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
 
+const saltRounds = 10;
+
 const AuthSchema = new mongoose.Schema(
   {
     fullname: {
@@ -15,6 +17,8 @@ const AuthSchema = new mongoose.Schema(
     },
     userdp: {
       type: "string",
+      default:
+        "https://i.pinimg.com/originals/a6/f3/c5/a6f3c55ace829310723adcb7a468869b.png",
     },
     userbio: {
       type: "string",
@@ -50,26 +54,37 @@ const AuthSchema = new mongoose.Schema(
         ref: "Blog",
       },
     ],
+    verified: {
+      type: "boolean",
+      default: false,
+    },
+    premium: {
+      type: "boolean",
+      default: false,
+    },
   },
   { timestamps: true }
 );
 
 AuthSchema.pre("save", async function (next) {
-  const gensalt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, gensalt);
+  this.password = bcrypt.hash(this.password, saltRounds);
   next();
 });
 
 AuthSchema.methods.checkPassword = async function (password) {
-  const checkPassword = await bcrypt.compare(password, this.password);
-  console.log("checked", checkPassword);
-  return checkPassword;
+  try {
+    const checkPassword = await bcrypt.compare(password, this.password);
+    console.log("Password comparison result:", checkPassword);
+    return checkPassword;
+  } catch (error) {
+    console.error("Error comparing passwords:", error);
+    throw new Error("Error comparing passwords");
+  }
 };
 
 AuthSchema.methods.newHashPassword = async function (password) {
   try {
-    const gensalt = await bcrypt.genSalt(10);
-    const checkPassword = await bcrypt.hash(password, gensalt);
+    const checkPassword = bcrypt.hash(password, saltRounds);
     console.log("true", checkPassword);
     return checkPassword;
   } catch (error) {

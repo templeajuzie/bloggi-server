@@ -10,6 +10,7 @@ const ejs = require("ejs");
 const { CreateToken, VerifyToken } = require("../Helper/authToken");
 const multer = require("multer");
 const cloudinary = require("../Utils/CloudinaryFileUpload");
+const bcrypt = require("bcrypt");
 
 const upload = multer({ dest: "public/tmp" });
 const clientUrl = process.env.CLIENT_URL;
@@ -25,7 +26,7 @@ const {
 const maxAgeInMilliseconds = 7 * 24 * 60 * 60 * 1000;
 
 const signUp = async (req, res) => {
-  const { fullname, username, email, password, userdp } = req.body;
+  const { fullname, username, email, password } = req.body;
 
   try {
     const findUser = await User.findOne({ email });
@@ -44,7 +45,6 @@ const signUp = async (req, res) => {
       username,
       email,
       password,
-      userdp,
     });
 
     if (error) {
@@ -70,32 +70,35 @@ const signUp = async (req, res) => {
 };
 
 const signIn = async (req, res) => {
-  const { email, password } = req.body;
+
+  const email = req.body.email.trim();
+  const password = req.body.password.trim();
+
+  console.log("Received login request:", email, password);
 
   try {
     const olduser = await User.findOne({ email });
 
-    
-
     if (!olduser) {
+      console.log("User not found");
       throw new NotFoundError("User not found");
     }
 
-    console.log("user found");
+    console.log("User found");
 
-    const authenticatedUser = await olduser.checkPassword(password);
+    const authenticatedUser = olduser.checkPassword(password);
+
+    console.log("ths is result", authenticatedUser);
 
     if (!authenticatedUser) {
-      // If passwords do not match, throw an error
+      console.log("Invalid credentials");
       throw new UnAuthorizedError("Invalid credentials");
     }
 
     const MaxAge = 30 * 24 * 60 * 60;
 
     const token = CreateToken(olduser._id, MaxAge);
-    console.log(token);
-
-    console.log(olduser);
+    console.log("Generated token:", token);
 
     res.setHeader("Authorization", "Bearer " + token);
     res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -113,11 +116,11 @@ const signIn = async (req, res) => {
       olduser,
     });
   } catch (error) {
-    res
-      .status(StatusCodes.UNAUTHORIZED) // Adjust the status code to UNAUTHORIZED
-      .json({ error: error.message });
+    console.error("Login error:", error);
+    res.status(StatusCodes.UNAUTHORIZED).json({ error: error.message });
   }
 };
+
 
 const singleUser = async (req, res) => {
   const id = req.params.id;
@@ -176,7 +179,7 @@ const userRecovery = async (req, res) => {
 
     return res
       .status(StatusCodes.OK)
-      .send({ message: `verification email has been sent to ${email}` });
+      .send({ message: `verification email sent` });
 
     console.log(`verification email sent to ${email}`);
   } catch (error) {
@@ -262,7 +265,7 @@ const checkUsername = async (req, res) => {
 
     console.log(req.body);
     console.log("taken");
-    return res.status(StatusCodes.CONFLICT).json({ message: "taken" });
+    return res.status(StatusCodes.OK).json({ message: "taken" });
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)

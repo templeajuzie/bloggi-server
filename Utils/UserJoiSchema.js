@@ -11,6 +11,8 @@ const Userjoi = joi.object({
   following: joi.array().items(joi.string().pattern(/^[0-9a-fA-F]{24}$/)),
   interest: joi.array(),
   mypost: joi.array().items(joi.string().pattern(/^[0-9a-fA-F]{24}$/)),
+  verified: joi.boolean(),
+  premium: joi.boolean(),
 });
 
 module.exports = Userjoi;
